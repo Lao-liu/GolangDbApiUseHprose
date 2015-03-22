@@ -1,6 +1,14 @@
 # GolangDbApiUseHprose
 Golang db api service use the hprose
 
+## Require
+```
+go get -u github.com/go-xorm/xorm
+go get -u github.com/hprose/hprose-go/hprose
+go get -u github.com/Sirupsen/logrus
+go get -u github.com/go-sql-driver/mysql
+```
+
 ## Install
 ```
 git clone https://github.com/Lao-liu/GolangDbApiUseHprose.git $GOPATH/src/GolangDbApiUseHprose
