@@ -1,9 +1,5 @@
 package service
 
-import (
-	"GolangDbApiUseHprose/models"
-)
-
 type Bench struct{}
 
 // 根据机构ID，获取结构信息。
