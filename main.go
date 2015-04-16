@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	// "github.com/xxtea/xxtea-go/xxtea"
 )
 
 // 公共变量
@@ -54,6 +55,22 @@ func (f *ServerFilter) OutputFilter(data []byte, context hprose.Context) []byte 
 	return data
 }
 
+// 使用XXTEA 加密传输数据
+
+// service.SetFilter(XXTEAFilter{"123456790!@#$%^&"});
+
+// type XXTEAFilter struct {
+//     Key string
+// }
+
+// func (filter XXTEAFilter) InputFilter(data []byte, context Context) []byte {
+//     return xxtea.Decrypt(data, []byte(filter.Key));
+// }
+
+// func (filter XXTEAFilter) OutputFilter(data []byte, context Context) []byte {
+//     return xxtea.Encrypt(data, []byte(filter.Key));
+// }
+
 // 迷失方法发布
 func MissFunctions(name string, args []reflect.Value) (result []reflect.Value) {
 	result = make([]reflect.Value, 1)
@@ -92,6 +109,8 @@ func main() {
 	server.AddMethods(service.Bench{})
 	// 添加隐含的迷失方法
 	server.AddMissingMethod(MissFunctions, true)
+	// 加密传输
+	// service.SetFilter(XXTEAFilter{"123456790!@#$%^&"});
 	// 开发模式下启用调试
 	if runDebugModel {
 		server.ServiceEvent = &ServerEvent{}
