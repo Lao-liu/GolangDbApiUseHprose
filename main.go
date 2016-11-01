@@ -4,12 +4,13 @@ import (
 	"GolangDbApiUseHprose/models"
 	"GolangDbApiUseHprose/service"
 	"fmt"
-	"github.com/Sirupsen/logrus"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/hprose/hprose-go/hprose"
 	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/Sirupsen/logrus"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/hprose/hprose-golang/rpc"
 	// "github.com/xxtea/xxtea-go/xxtea"
 )
 
@@ -20,34 +21,42 @@ var (
 	log           = logrus.New()
 )
 
-// Hprose 事件接口实现
+// ServerEvent Hprose 事件接口实现
 type ServerEvent struct{}
 
-func (e *ServerEvent) OnBeforeInvoke(name string, args []reflect.Value, byref bool, context hprose.Context) {
+// OnBeforeInvoke 调用前执行
+func (e *ServerEvent) OnBeforeInvoke(name string, args []reflect.Value, byref bool, context rpc.Context) {
 	log.WithFields(logrus.Fields{
 		"FuncName": name,
 	}).Info(args)
 }
-func (e *ServerEvent) OnAfterInvoke(name string, args []reflect.Value, byref bool, result []reflect.Value, context hprose.Context) {
+
+// OnAfterInvoke 调用后执行
+func (e *ServerEvent) OnAfterInvoke(name string, args []reflect.Value, byref bool, result []reflect.Value, context rpc.Context) {
 	log.WithFields(logrus.Fields{
 		"FuncName": name,
 	}).Info(result)
 }
-func (e *ServerEvent) OnSendError(err error, context hprose.Context) {
+
+// OnSendError 服务端出错时执行
+func (e *ServerEvent) OnSendError(err error, context rpc.Context) {
 	log.Error(err.Error())
 }
 
-// Hprose 过滤接口实现
+// ServerFilter Hprose 过滤接口实现
 type ServerFilter struct{}
 
-func (f *ServerFilter) InputFilter(data []byte, context hprose.Context) []byte {
+// InputFilter 输入过滤
+func (f *ServerFilter) InputFilter(data []byte, context rpc.Context) []byte {
 	log.WithFields(logrus.Fields{
 		"DATA":    string(data),
 		"CONTEXT": context,
 	}).Info("INPUT")
 	return data
 }
-func (f *ServerFilter) OutputFilter(data []byte, context hprose.Context) []byte {
+
+// OutputFilter 输出过滤
+func (f *ServerFilter) OutputFilter(data []byte, context rpc.Context) []byte {
 	log.WithFields(logrus.Fields{
 		"DATA":    string(data),
 		"CONTEXT": context,
@@ -71,8 +80,8 @@ func (f *ServerFilter) OutputFilter(data []byte, context hprose.Context) []byte 
 //     return xxtea.Encrypt(data, []byte(filter.Key));
 // }
 
-// 迷失方法发布
-func MissFunctions(name string, args []reflect.Value) (result []reflect.Value) {
+// MissFunctions 迷失方法发布
+func MissFunctions(name string, args []reflect.Value, context rpc.Context) (result []reflect.Value) {
 	result = make([]reflect.Value, 1)
 	switch strings.Title(name) {
 	case "Query":
@@ -83,7 +92,7 @@ func MissFunctions(name string, args []reflect.Value) (result []reflect.Value) {
 	return
 }
 
-// 执行SQL查询
+// Query 执行SQL查询
 func Query(sql string) service.ResultData {
 	if sql == "" {
 		return service.Result(500, "查询语句不可为空", nil)
@@ -102,20 +111,20 @@ func main() {
 	// 初始化Model
 	models.Init(false)
 	// 初始化Hprose
-	server := hprose.NewHttpService()
-	// 服务器端工具 ServerTool Api
-	server.AddMethods(service.ServerTool{})
+	server := rpc.NewHTTPService()
+	// 服务器端工具 ServiceTool Api
+	server.AddInstanceMethods(service.ServiceTool{})
 	// 工作台接口 Bench Api
-	server.AddMethods(service.Bench{})
+	server.AddInstanceMethods(service.Bench{})
 	// 添加隐含的迷失方法
-	server.AddMissingMethod(MissFunctions, true)
+	server.AddMissingMethod(MissFunctions, rpc.Options{Mode: rpc.Raw})
 	// 加密传输
 	// service.SetFilter(XXTEAFilter{"123456790!@#$%^&"});
 	// 开发模式下启用调试
 	if runDebugModel {
-		server.ServiceEvent = &ServerEvent{}
+		server.Event = &ServerEvent{}
 		server.AddFilter(&ServerFilter{})
-		server.DebugEnabled = true
+		server.Debug = true
 	}
 	fmt.Println("Run GolangDbApiUseHprose on port http://127.0.0.1" + servicePort + " ...")
 	http.ListenAndServe(servicePort, server)
